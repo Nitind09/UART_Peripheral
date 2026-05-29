@@ -6,10 +6,39 @@ A fully functional, **16550-compatible UART peripheral** implemented from scratc
 
 ## Table of Contents
 
+- [Overview](#overview)
+- [Features](#features)
 - [RTL Design](#rtl-design)
 - [Testbench & Simulation](#testbench--simulation)
 - [Generated Schematic](#generated-schematic)
 - [FPGA Implementation Results](#fpga-implementation-results)
+
+---
+
+## Overview
+
+This project implements a UART (Universal Asynchronous Receiver/Transmitter) peripheral in synthesisable Verilog, following the **NS16550A register model**. It supports configurable word length, parity, and stop bits, and features independent 16-entry deep TX and RX FIFOs. The design has been verified in simulation via a self-testing loopback testbench and is ready for FPGA implementation on the Arty A7-100T.
+
+---
+
+## Features
+
+| Feature | Detail |
+|---|---|
+| **Word Length** | 5, 6, 7, or 8 data bits (selectable via LCR) |
+| **Stop Bits** | 1 or 2 stop bits (1.5 for 5-bit word) |
+| **Parity** | None, Odd, Even, Sticky-1, Sticky-0 |
+| **Baud Rate** | Fully programmable via 16-bit divisor (DLL/DLM) |
+| **TX FIFO** | 16 × 8-bit synchronous FIFO with overrun detection |
+| **RX FIFO** | 16 × 8-bit synchronous FIFO with programmable threshold (1/4/8/14 bytes) |
+| **Error Detection** | Framing error, Parity error, Overrun error, Break interrupt |
+| **Break Control** | Transmitter can force a break condition (line LOW) |
+| **FIFO Reset** | Independent soft-reset for TX and RX FIFOs via FCR |
+| **LSR** | Line Status Register with sticky error flags, cleared on read |
+| **SCR** | Scratch register for software use |
+| **RX Synchroniser** | Two-stage flip-flop metastability protection on RX input |
+| **Loopback Testbench** | Self-checking TX→RX loopback with timeout detection |
+| **FPGA Ready** | Xilinx XDC constraints included for Arty A7-100T |
 
 ---
 
@@ -62,6 +91,7 @@ uart_top.v          ← top-level integration
 | 0x3  | —    | LCR  | R/W | Line Control Register |
 | 0x5  | —    | LSR  | R   | Line Status Register |
 | 0x7  | —    | SCR  | R/W | Scratch Register |
+
 
 **Baud Rate Generator** — a 16-bit down-counter clocked at `F_clk`. It reloads from `{DLM, DLL}` each time it reaches zero and emits a single-cycle `baud_pulse`. Every bit period in the TX/RX engines is exactly 16 `baud_pulse` ticks, giving 16× oversampling.
 
@@ -197,6 +227,9 @@ task read_reg(input [2:0] r_addr, output [7:0] r_data);
 | 7 | Read RBR, compare to `0x5A` | RX FIFO pop, `data_out` bus, and register read-back are all correct |
 
 `error_count` accumulates any mismatch or timeout. A final `$display` prints either `ALL TESTS PASSED` or the number of failures.
+A pass/fail summary is printed to the console at the end.
+
+![Testbench Results](testbench_results.png)
 
 ### Simulation Result
 
@@ -245,9 +278,7 @@ The RTL schematic below was produced by Vivado synthesis. It shows the five sub-
 
 ### Timing Summary
 
-All user-specified timing constraints are met with infinite slack on both setup and hold paths — zero failing endpoints out of 583 analysed.
-
-![Timing Summary](timing_summary.png)
+All user-specified timing constraints are met with finite positive slack on both setup and hold paths — zero failing endpoints out of 583 analysed.
 
 ### Device Floorplan
 
@@ -267,6 +298,3 @@ All user-specified timing constraints are met with infinite slack on both setup 
 
 ---
 
-## License
-
-Released under the [MIT License](https://opensource.org/licenses/MIT).
