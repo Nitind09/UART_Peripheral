@@ -237,15 +237,6 @@ The simulation was run in **Vivado xsim** at a 50 MHz system clock (`#10` half-p
 
 ![Simulation Waveform](sim_waveform.png)
 
-**What the waveform shows:**
-
-- The `tx` / `rx` lines carry identical UART frames. The start bit (low), eight data bits of `0x5A` (`01011010`) LSB-first, and the stop bit (high) are clearly visible as the repeated pulse pattern between 0 and 8 µs
-- `data_out` reads `0x20` during LSR polls (bits 5 and 6 high = TX FIFO empty and transmitter empty, all error flags clear), then returns `0x5A` on the final RBR read
-- `rdata` correctly captures `0x20` from the LSR poll and `0x5A` from the payload read
-- `error_count` stays at `0x00000000` for the entire simulation — **all test cases passed**
-- `timeout` reaches only 19 before the Data Ready flag is set, far within the 5000-iteration guard, confirming the loopback completes in well under the allocated timeout window
-
----
 
 ## Generated Schematic
 
