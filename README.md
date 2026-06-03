@@ -14,6 +14,9 @@ targeting the **Xilinx Artix-7 XC7A100T** with all timing constraints met.
 - [Testbench & Simulation](#testbench--simulation)
 - [Generated Schematic](#generated-schematic)
 - [FPGA Implementation Results](#fpga-implementation-results)
+- [Implementation Target](#implementation-target)
+- [How to Simulate](#how-to-simulate)
+- [License](#license)
 
 ---
 
@@ -24,7 +27,7 @@ synthesisable Verilog, following the **NS16550A register model**. It supports co
 word length, parity, and stop bits, and features independent 16-entry deep TX and RX FIFOs.
 The design has been verified in simulation via a self-checking loopback testbench and taken
 through synthesis and implementation in Xilinx Vivado, with zero timing violations across
-583 analysed endpoints.
+401 analysed endpoints.
 
 ---
 
@@ -240,7 +243,8 @@ A pass/fail summary is printed to the console at the end.
 
 ### Simulation Result
 
-
+The simulation was run in **Vivado xsim** at a 50 MHz system clock with a baud divisor of 2,
+giving one `baud_pulse` every 40 ns and a complete 8N1 frame in approximately 6.4 µs.
 
 ![Simulation Waveform](sim_waveform.png)
 
@@ -257,6 +261,8 @@ A pass/fail summary is printed to the console at the end.
 - `tx` and `rx` remain HIGH (idle) throughout this window — frame transmission begins
   after FCR enables the FIFOs and the THR write is issued
 - `error_count` stays at `0x00000000` throughout — no mismatches detected
+
+---
 
 ## Generated Schematic
 
