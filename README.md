@@ -1,6 +1,8 @@
 # Advanced UART Peripheral — Verilog RTL
 
-A fully functional, **16550-compatible UART peripheral** implemented from scratch in synthesisable Verilog RTL, verified in simulation with a self-checking loopback testbench, and successfully implemented on a **Digilent Arty A7-100T** FPGA (Xilinx Artix-7 XC7A100T).
+A **16550-compatible UART peripheral** implemented from scratch in synthesisable Verilog RTL,
+verified in simulation with a self-checking loopback testbench, and synthesised and implemented
+targeting the **Xilinx Artix-7 XC7A100T** with all timing constraints met.
 
 ---
 
@@ -17,7 +19,12 @@ A fully functional, **16550-compatible UART peripheral** implemented from scratc
 
 ## Overview
 
-This project implements a UART (Universal Asynchronous Receiver/Transmitter) peripheral in synthesisable Verilog, following the **NS16550A register model**. It supports configurable word length, parity, and stop bits, and features independent 16-entry deep TX and RX FIFOs. The design has been verified in simulation via a self-testing loopback testbench and is ready for FPGA implementation on the Arty A7-100T.
+This project implements a UART (Universal Asynchronous Receiver/Transmitter) peripheral in
+synthesisable Verilog, following the **NS16550A register model**. It supports configurable
+word length, parity, and stop bits, and features independent 16-entry deep TX and RX FIFOs.
+The design has been verified in simulation via a self-checking loopback testbench and taken
+through synthesis and implementation in Xilinx Vivado, with zero timing violations across
+583 analysed endpoints.
 
 ---
 
@@ -233,10 +240,23 @@ A pass/fail summary is printed to the console at the end.
 
 ### Simulation Result
 
-The simulation was run in **Vivado xsim** at a 50 MHz system clock (`#10` half-period) with a baud divisor of 2, giving one `baud_pulse` every 40 ns and a complete 8N1 frame (1 start + 8 data + 1 stop = 10 bits × 16 ticks) in approximately 6.4 µs.
+
 
 ![Simulation Waveform](sim_waveform.png)
 
+**What the waveform shows:**
+
+- The waveform captures the register configuration phase of the testbench — SCR write/read,
+  DLAB set, DLL/DLM divisor programming, LCR frame format write, and FCR FIFO enable
+- `addr[2:0]` transitions through `0x7` (SCR), `0x3` (LCR), `0x0` (DLL), `0x1` (DLM),
+  back to `0x3` (LCR format clear), then `0x2` (FCR) — matching the testbench sequence exactly
+- `data_out` correctly reflects `0xA5` on the SCR readback, confirming the register write/read
+  path is functional
+- `wr` and `rd` strobes pulse for exactly one clock cycle per operation, as driven by the
+  `write_reg` and `read_reg` bus-abstraction tasks
+- `tx` and `rx` remain HIGH (idle) throughout this window — frame transmission begins
+  after FCR enables the FIFOs and the THR write is issued
+- `error_count` stays at `0x00000000` throughout — no mismatches detected
 
 ## Generated Schematic
 
@@ -269,23 +289,45 @@ The RTL schematic below was produced by Vivado synthesis. It shows the five sub-
 
 ### Timing Summary
 
-All user-specified timing constraints are met with finite positive slack on both setup and hold paths — zero failing endpoints out of 583 analysed.
+![Timing Summary](timing_summary.png)
 
-### Device Floorplan
+| Metric                         | Setup      | Hold       | Pulse Width |
+|--------------------------------|------------|------------|-------------|
+| Worst Slack (WNS / WHS / WPWS) | +4.776 ns  | +0.035 ns  | +3.750 ns   |
+| Total Negative Slack           | 0.000 ns   | 0.000 ns   | 0.000 ns    |
+| Failing Endpoints              | 0 / 401    | 0 / 401    | 0 / 182     |
 
-![Device Floorplan](floorplan.png)
+Clock constraint: 100 MHz (10.000 ns period) applied via `create_clock` on `clk`.  
+All user-specified timing constraints are met.  
+Critical path slack: **+4.776 ns** — design closes timing with 47% margin at 100 MHz.
 
 ---
 
-## Target Hardware
+## Implementation Target
 
-| Item | Detail |
-|------|--------|
-| **Board**  | Digilent Arty A7-100T |
+| Item       | Detail                           |
+|------------|----------------------------------|
 | **FPGA**   | Xilinx Artix-7 XC7A100T-CSG324-1 |
-| **Clock**  | 100 MHz onboard oscillator |
-| **TX / RX**| Connected to onboard FT2232HQ USB-UART bridge |
-| **Tool**   | Xilinx Vivado |
+| **Board**  | Digilent Arty A7-100T            |
+| **Tool**   | Xilinx Vivado                    |
+| **Clock**  | 100 MHz (constrained via XDC)    |
 
 ---
 
+## How to Simulate
+
+**Tool:** Xilinx Vivado (tested on 2020.2)  
+**Simulator:** Vivado xsim  
+**Top-level testbench:** `tb_uart_top.v`
+
+1. Add all `.v` source files and `tb_uart_top.v` to a new Vivado project
+2. Set `tb_uart_top` as the simulation top
+3. Run behavioural simulation
+4. The console output will print each test step and a final pass/fail summary
+5. `error_count = 0x00` confirms all test cases passed
+
+---
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).  
+See individual source file headers for per-file notices.
